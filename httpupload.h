@@ -12,6 +12,8 @@
 #include <QHttpMultiPart>
 #include <QHttpPart>
 #include <QFileInfo>
+#include <QJsonObject>
+#include <QJsonDocument>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class HttpUpload; }
@@ -34,6 +36,8 @@ private slots:
     void onUploadProgress(qint64 bytesent, qint64 bytetotal);
 //    void onUploadFinished(QNetworkReply *reply);
     void doneUpload();
+
+    void on_pbSubmit_clicked();
 
 private:
     Ui::HttpUpload *ui;

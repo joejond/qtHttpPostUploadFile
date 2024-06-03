@@ -1,11 +1,18 @@
 #include "httpupload.h"
 #include "ui_httpupload.h"
 
+#define APPLICATION_JSON 0
+#define PROGRESS 0
+
 HttpUpload::HttpUpload(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::HttpUpload)
 {
     ui->setupUi(this);
+
+    ui->txtPass->setEchoMode(QLineEdit::Password);
+
+//    yourLineEdit->setEchoMode(yourCheckBox->checkState() == Qt::Checked ? QLineEdit::Normal : QLineEdit::Password );
 
     ui->progressBar->setValue(0);
     manager = new QNetworkAccessManager(this);
@@ -118,16 +125,67 @@ void HttpUpload::onUploadProgress(qint64 bytesent, qint64 bytetotal)
 void HttpUpload::doneUpload()
 {
     qDebug() << __FUNCTION__;
-    if(!reply->error())
-    {
-        file->close();
-        file->deleteLater();
-        file=0;
-        reply->deleteLater();
-    }
+//    if(!reply->error())
+//    {
+//        file->close();
+//        file->deleteLater();
+//        file=0;
+//        reply->deleteLater();
+//    }
 
     QByteArray buffer = reply->readAll();
     qDebug() << buffer;
 }
 
+
+
+void HttpUpload::on_pbSubmit_clicked()
+{
+    QString user = ui->txtUser->text(); QByteArray baUser = user.toUtf8();
+    QString pass = ui->txtPass->text(); QByteArray baPass = pass.toUtf8();
+
+    url = QUrl("http://localhost:3000/post/user");
+    QNetworkRequest request(url);
+
+#if APPLICATION_JSON
+    //menggunakan application/json  atau application/url-encode
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+    QJsonObject obj;
+    obj["user"] = user;
+    obj["pass"] = pass;
+    QJsonDocument doc(obj);
+    QByteArray data = doc.toJson();
+//     or
+//     QByteArray data("{\"key1\":\"value1\",\"key2\":\"value2\"}");
+
+
+    reply= manager->post(request,data);
+
+#else
+
+    //menggunakan application/form-data
+    QHttpMultiPart *multiform = new QHttpMultiPart(QHttpMultiPart::FormDataType);
+    QHttpPart loginUser;
+    loginUser.setHeader(QNetworkRequest::ContentDispositionHeader, QVariant("form-data; name=\"user\""));
+    loginUser.setBody(baUser);
+
+    QHttpPart loginPass;
+    loginPass.setHeader(QNetworkRequest::ContentDispositionHeader, QVariant("form-data; name=\"pass\""));
+    loginPass.setBody(baPass);
+    multiform->append(loginUser);
+    multiform->append(loginPass);
+    reply= manager->post(request,multiform);
+    multiform->setParent(reply);
+#endif
+
+        qDebug() << "url : "<< url;
+
+//    qDebug() << "send POST";
+    connect(reply, SIGNAL(finished()), this, SLOT(doneUpload()) );
+#if PROGRESS
+    connect(reply, &QNetworkReply::uploadProgress, this, &HttpUpload::onUploadProgress);
+#endif
+
+}
 
